@@ -2313,14 +2313,13 @@ bool ChkRxU0()
            CRC_Rx = VRx[20];
            CRC_Rx = CRC_Rx << 8;
            CRC_Rx = CRC_Rx + VRx[19];
-          // D1(CRC_Rx, PINK);
+          
            CRC_Mk = 0;
 
            for( i = 0 ; i < 19 ; i++)
            {
                CRC_Mk = CRC_Mk + VRx[i]; // Sumo la cantidad de Bytes variables
            }
-        //   D1(CRC_Mk, RED);
            if(CRC_Mk != CRC_Rx)     //Si no esta bn el control de CRC
            {
                DTxt("Ups! CRC MAL!!!");
