@@ -15,6 +15,7 @@ Makefile
 *.properties
 *.bash
 *.xml
+*.obj
 funclist
 nbproject/sd1.c
 nbproject/spi1.c
