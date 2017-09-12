@@ -869,7 +869,7 @@ void main(void) // PROGRAMA PRINCIPAL
 {
     Inicializar_Micro(); // CONFIGURA EL MICRO
     Inicializar_Valores(); // Valores por defecto necesarios
-   // DTxt("Iniciando Pantalla...");
+    DTxt("Iniciando Pantalla...");
     Inicializar_Pantalla();
    // DTxt("Ejecutando Secuencia de Booteo...");
     //Bootear();
