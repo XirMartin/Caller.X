@@ -869,7 +869,7 @@ void main(void) // PROGRAMA PRINCIPAL
 {
     Inicializar_Micro(); // CONFIGURA EL MICRO
     Inicializar_Valores(); // Valores por defecto necesarios
-    DTxt("Iniciando Pantalla...");
+    DTxt("v0.2 Emula 4 eMozos distintos - Con Timer WT3");
     Inicializar_Pantalla();
    // DTxt("Ejecutando Secuencia de Booteo...");
     //Bootear();
@@ -1071,7 +1071,7 @@ uint8_t i;
 
 
 // Botones
-                TARB = 20;  // Tiempo AntiRebote para Botones
+                TARB = 5;  // Tiempo AntiRebote para Botones
 
 
 
@@ -1133,1049 +1133,6 @@ uint8_t i;
 
 #endif  // Inicializacion
 
-
-#if 0
-
-void Comms_Admin()
-{
-    BIT     FBC;
-    uint8_t i, Aux;
-
-    if(FTRRMW == 1) // Transmisión diferida en el Tiempo por MiWi
-    {
-        DoTxMw(Address_MiWi,FBC_MiWi); //Envía el dato por el Puerto MiWi
-        FTPRMW = 0;
-        FTRRMW = 0;
-    }
-
-    if(ChkRxU0())   // <-- Usart 0 / Llegaron Datos de Aguas arriba ?
-    {
-//    DTxt("Recibi algo de la PC");
-#if 1
-        Aux = VDi[0] >> 6;
-        FBC = Aux & 0X01;       //  Se Analiza si el Msj es BroadCast
-        
-        if(LNID == 0)   // Verifico si este repetidor es el PAN, de ser asi, genero el MID.
-        {
-#if 1
-            if(FBC == 1)             //Si es Broadcast debo utilizar otros valores de MID 201 - 255
-            {
-                VGMID[0]++;
-                if(VGMID[0] < 200)  //Utilizare los valores 201-255
-                {
-                    VGMID[0] = 201;
-                }
-                for(i = 11; i > 2; i--) // Insersion del MID en el VDi
-                {
-                    VDi[i] = VDi[i-1]; // Se mueven los datos (+1) para poder insertar MID.
-                }
-                VDi[2] = VGMID[0];
-                VDi[0] ++;              // Debo incrementar el largo del Mensaje
-            }
-            else
-            {
-                if((VDi[1] < 127)&&(VDi[1] != 0))  // Verifico si el mesaje es para un nodo inalambrico.
-                {
-                    VGMID[VDi[1]]++;    // incremento el MID para ese NID.
-                    if(VGMID[VDi[1]] == 200)
-                    {
-                        VGMID[VDi[1]] = 1;    // incremento nuevamente el MID para ese NID. (no es valido un MID = 0.
-                    }
-                    for(i = 11; i > 2; i--) // Insersion del MID en el VDi
-                    {
-                        VDi[i] = VDi[i-1]; // Se mueven los datos (+1) para poder insertar MID.
-                    }
-                    VDi[2] = VGMID[VDi[1]];
-                    VDi[0] ++;              // Debo incrementar el largo del Mensaje
-                }
-            }
-
-#endif  // Generacion de MID
-        }
-                
-        if(VDi[1]==LNID && FBC == 0)// verifico si el mensaje es exclusivo para Esta unidad
-        {
-#if 1
-            // El mjs es para esta unidad especificamente, se lo analiza
-CA_ToMe:    if(FBC == 0)
-            {
-                for(i=0; i < 10; i++)
-                {
-                    VDi[i] = VDi[2+i];  // Dejo netamente el dato a analizar
-                }
-            }
-            else
-            {
-                for(i=0; i < 9; i++)
-                {
-                    VDi[i] = VDi[3+i];  // Dejo netamente el dato a analizar
-                }
-            }
-            ChkMjs();
-            return;
-#endif // El Mjs es especificamente para esta unidad, no se debe restrasmitir a nadie mas
-        }
-        else
-        {
-#if 1
-         // El Mjs no es exclusivo de esta unidad, se debe retransmitir
-
-#if 1
-        if(FPMw == 1) // Verifico si esta presente el Puerto MiWi
-        {
-            for(i = 0; i < 10; i++)
-            {
-                VDoMW[i] = VDi[i+2]; // Se cargan los Datos para Enviarlos por MiWi
-            }
-            if(LNID == 0)
-            {
-                FTRRMW = 1;         //El PAN no tiene delay para enviar por MiWi
-            }
-            else
-            {
-                FTPRMW = 1;         //Flag de tiempo pregunta retardo de MIWI
-            }
-            Address_MiWi = VDi[1];
-            FBC_MiWi = FBC;
-        }
-
-#endif  // MiWi
-
-#if 1
-        if(FPU1 == 1) // Verifico si esta presente el Puerto 1 - Usart 1 Virtual
-        {
-            for(i = 0; i < 12; i++)
-            {
-                VDo[i] = VDi[i]; // Se cargan los Datos para Enviarlos por el Puerto 1 - Usart 1 Virtual
-            }
-            DoTxU1();      // Llamar Fn de luis para enviar por SPI a la USART 1
-        }
-#endif  // Usart 1 Virtual
-
-#if 1
-        if(FPU2 == 1) // Verifico si esta presente el Puerto 2 - Usart 2 Virtual
-        {
-            for(i = 0; i < 12; i++)
-            {
-                VDo[i] = VDi[i]; // Se cargan los Datos para Enviarlos por el Puerto 1 - Usart 1 Virtual
-            }
-            DoTxU2();      // Llamar Fn de luis para enviar por SPI a la USART 2
-        }
-#endif  // Usart 2 Virtual
-
-#if 1
-            Aux = VDi[0] >> 6;
-            Aux = Aux & 0x03;   // Armo el Tipo de Mensaje
-
-            if( Aux == 3 )      // verifico si el mensaje es un Broadcast
-            {
-                goto CA_ToMe;   //  Analizo el Mjs
-            }
-#endif        // Analizo si es Broadcast para saber si tb es para esta unidad
-
-#endif // El Mjs no es exclusivo de esta unidad, se debe retransmitir
-        }
-#endif         // Analisis del Mensaje
-    }
-
-    if(ChkRxMw())   // <-- MiWi / Consulta si llegaron Datos de algun Nodo por el MRF
-    {
-        if(ChkNoRed())  // Chekea la No Redundancia del mjs, para ver si no se habia enviado ya ese mjs
-        {
-//             DTxt("Recibi algo Por MiWi");
-             Encolar();  // Debo retransmitir al PAN
-        }
-    }
-
-    if(ChkRxU1())   // <-- Usart 1 / Consulta si llegaron Datos de algun Repetidor
-    {
-        if(ChkNoRed())  // Chekea la No Redundancia del mjs, para ver si no se habia enviado ya ese mjs
-        {
-             Encolar();  // Debo retransmitir al PAN
-        }
-    }
-
-    if(ChkRxU2())   // <-- Usart 2 / Consulta si llegaron Datos de algun Repetidor
-    {
-        if(ChkNoRed())  // Chekea la No Redundancia del mjs, para ver si no se habia enviado ya ese mjs
-        {
-             Encolar();  // Debo retransmitir al PAN
-        }
-    }
-    
-    DoTxU0();
-}
-
-bool ChkRxU0()
-{
-    BYTE i, j;
-    BYTE Aux;
-
-       if(FRxU0 == 0)     //Se recibió un dato nuevo?
-       {
-           return false;      // no hay que generar ningun msj y no llego nada nuevo
-       }
-       FRxU0 = 0;
-
-
-#if 1
-       if(VRx[1] == 0)  // Verifico si el mensaje recibido fue un ACK
-       {
-           if(VRx[2] != VRx[3])
-           {
-               return false;
-           }
-       }
-       else
-       {
-           CRC = 0;
-           for( i = 1 ; i < 20 ; i++)
-           {
-               CRC = CRC + VRx[i]; // Sumo la cantidad de Bytes variables
-           }
-           CRC_msj = 0;
-           CRC_msj = VRx[21];
-           CRC_msj = CRC_msj << 8;
-           CRC_msj = CRC_msj + VRx[20];
-           if(CRC != CRC_msj)
-           {
-               FACK_P = 1;             //Activo el envío de  ACK al otro extremo con el anterior Sec Num
-               return false;
-           }
-
-       }
-#endif  //  **** Verificacion del CRC
-
-#if 1
-       if(LRx == 0) // Verifico que el largo sea cero para chequear el Tipo de Mensaje
-       {
-           // El largo es cero, es un Mjs interno de la Red Cehn
-           Aux = VRx[0] >> 6;
-           Aux = Aux & 0x03; // Armo el Tipo de Mensaje
-
-            if(Aux == 0) //  Tipo de Mensaje: 0 - ACK
-            {
-                CloseTimer3(); // dejo de esperar una repuesta
-                if(VRx[2] == NSECTx)  // Nro de secuencia del ACK está bien? (con respecto al msj enviado)
-                {
-                    FACK_W = 0;      // Dejo de esperar el ACK
-                }
-                else
-                {
-                    FACK_TO = 1;     // N° de SEc mal, pido reenviar el ultimo msj
-                }
-                return false;
-            }
-
-            if(Aux == 1) //  Tipo de Mensaje: 1 - Reset
-            {
-                NSECRx = VRx[2];     // Si es así tomo el nuevo Nro de Secuencia de PC
-                NSECTx = 255;        // Reseteo mi Nro de Secuencia
-                FACK_P = 1;
-
-                VDo[0] = VRx[0]; // Vamos a mandar solo 1 byte, con el reset
-                if(FPU1 == 1) // Verifico si esta presente el Puerto 1 - Usart 1 Virtual
-                {
-                    DoTxU1();      // Envio Aguas Abajo el Reset
-                }
-                if(FPU2 == 1) // Verifico si esta presente el Puerto 2 - Usart 2 Virtual
-                {
-                    DoTxU2();      // Envio Aguas Abajo el Reset
-                }
-                return false;
-            }
-
-            if(Aux == 2) //  Tipo de Mensaje: 2 - Funcion no implementada Todavia
-            {
-                return false;
-            }
-
-            if(Aux == 3) //  Tipo de Mensaje: 3 - Funcion no implementada Todavia
-            {
-                return false;
-            }
-       }
-#endif  //  **** Verificacion del Tipo de Mensaje
-
-         // El largo no es cero, el Mjs contiene datos para los EDs
-
-#if 1
-       Aux = NSECRx;
-       Aux ++;
-
-        if(VRx[2] != Aux)    // El numero de secuencia esta bien?
-        {
-            // El numero de secuencia es erroneo, dato no confiable. Envio un ACK con el ultimo numero de secuencia recibido correctamente
-            if(CBNSec == 3)
-            {
-                // Por cansacio, vamos a tomar como valido este N° de Secuencia
-                goto NSecOK;
-            }
-            else
-            {
-                FACK_P = 1;             //Activo el envío de  ACK al otro extremo
-                CBNSec ++;
-                return false;
-            }
-        }
-        else
-        {
-            // El numero de secuencia esta bien, dato confiable.
-NSecOK:     NSECRx = VRx[2];    //Actualizo el  Nro de Secuencia
-            FACK_P = 1;         //Activo el envío de  ACK al otro extremo
-            CBNSec = 0;
-#endif  //  **** Verificacion del Numero de Secuencia
-            LED_PAN = 1;            // Indico que se recibio algo de aguas arriba y que se esta por retransmitir
-
-            VDi[0] = VRx[0];
-            for(i = 1; i <= LRx; i++)
-            {
-                VDi[i] = VRx[2+i]; // Se cargan los Datos Recibidos
-            }
-            return true;
-        }
-}
-
-void DoTxU0()
-{
-   if(FTxU0 == 1)  // Verifico si se esta transmitiendo algo
-   {
-       return;     //se esta transmitiendo, no puedo hacer nada
-   }
-   FTxU0 = 1;  // indico que voy a realizar una transmision
-   if(FACK_P == 1)      // HAy una ACK pendiente?
-   {
-       FACK_P = 0;
-       TX9D = 1;    //Aviso q estoy mandando T/L
-       TXREG = 0;   // Envio el 1° byte, el resto sera por Interrupcion
-       OTx = 1;
-       LTx = 0;
-       FACK_T = 1;  // indico que voy a estar enviando un ACK
-       PIE1bits.TXIE = 1; // Habilito interrupciones de TX Usart
-       return;
-   }
-   FTxU0 = 0;  // indico que voy a realizar una transmision
-   FTxU0 = 1;
-   if(FACK_TO == 1)    // Verifico si hubo un TimeOut por un ACK que nunca llego, se debe retransmitir
-   {
-       FACK_TO = 0;
-       TX9D = 1;
-       TXREG = VTx[0];             // Se retransmite el ultimo Mjs
-       OTx = 1;
-       LTx = VTx[0] & 0x0F;  // Genero el Largo del Msj
-       PIE1bits.TXIE = 1;          // Habilito interrupciones de TX Usart
-       return;
-   }
-
-   FTxU0 = 0;  // indico que voy a realizar una transmision
-   FTxU0 = 1;
-
-   if(FACK_W == 1)
-   {
-       FTxU0 = 0;  // Borro, porque no se esta por hacer una transmision
-       return; // Si estoy esperando un ACK, no puedo enviar un msj nuevo
-   }
-
-   FTxU0 = 0;  // indico que voy a realizar una transmision
-   FTxU0 = 1;
-
-   if(Dencolar())
-   {
-       if(VDi[3] == 0 && VDi[4] == 3 && LNID == 0)    //Si llego un Ping Cehn y soy el PAN
-       {
-           FPing_Cehn = 1; //Pongo a 1 el flag de devolver Ping de Cehn
-           NID_Cehn = VDi[1];
-           ID_Ping_Cehn = VDi[5];       //Obtengo el PingID para devolverlo
-           FTxU0 = 0;
-           return;
-       }
-       if(VDi[3] == 0 && VDi[4] == 4 && LNID == 0)    //Si llego un Ping Cehn y soy el PAN
-       {
-           FPing_Spam = 1; //Pongo a 1 el flag de devolver Ping de Spam
-           NID_Spam = VDi[1];
-           ID_Ping_Spam = VDi[5];       //Obtengo el PingID para devolverlo
-           FTxU0 = 0;
-           return;
-       }
-       Protocolizador();   // Esta rutina arma el mjs para ser enviado por RS232 y inicia el proceso de enviado.
-       TX9D = 1;
-       TXREG = VTx[0]; // Envio el 1° byte, el resto sera por Interrupcion
-       OTx = 1;
-       LTx = VTx[0] & 0x0F;
-       FACK_W = 1;  // Indico que voy a estar esperando un ACK
-
-       PIE1bits.TXIE = 1; // Habilito interrupciones de TX Usart
-       return;
-   }
-    FTxU0 = 0;  // Borro, porque no se esta por hacer una transmision
-
-}
-
-bool ChkRxMw()
-{
-    uint8_t i;
-
-    if(FPMw == 0) // Verifico si esta presente el Modulo MiWi
-    {
-        return false; // no hay modulo presente.
-    }
-    if(MiApp_MessageAvailable())        // Llego un Mjs por MiWi? (Puerto 10 - MiWi)
-    {
-        MiApp_DiscardMessage();                 // Una vez leido el Mjs, lo descarto
-        LED_MiWi = 1;                           // Indico que se recibio algo de MiWi y que se esta por retransmitir al PAN
-
-#if 1
-        if((rxMessage.Payload[1] == 0)&&(rxMessage.Payload[2] == 2))     // Verifico si recibi un Ping de Cobertura para responderlo
-        {
-//                    DTxt("MiWi Ping de Cobertura");
-
-            MiApp_FlushTx();
-            MiApp_WriteData(0); // MID - No utilizado NI chequeado en la recepcion
-            MiApp_WriteData(0); // FN
-            MiApp_WriteData(2); // DATA
-            MiApp_WriteData(rxMessage.PacketRSSI);      // Devuelvo el RSSI con el que recibí el mensaje
-            MiApp_WriteData(rxMessage.PacketLQI);       // Devuelvo el LQI con el que recibí el mensaje
-            TargetLongAddress[0] = rxMessage.SourceAddress[0];  // Le devuelvo el ping a quien me lo mando
-            if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 1° intento de mandar el mjs
-            {
-                 delay_us (10);
-                 if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 2° intento de mandar el mjs
-                 {
-                    delay_us (10);
-                     if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 3° intento de mandar el mjs
-                     {
-                         delay_us (10);
-                         if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 4° intento de mandar el mjs
-                         {
-                         }
-                     }
-                 }
-            }
-            return false;  // Lo que recibí no era dato, informo que no recibí nada
-
-        }
-#endif          // Ping de Cobertura
-
-
-        if (rxMessage.Payload[1] < 200)         // Verifico que el dato que llega del ED sea una Fn que tiene 3 bytes
-        {
-#if 1
-            if((rxMessage.Payload[1] == 0)&&(rxMessage.Payload[2] == 4))     // Verifico si recibi un Ping de Spam
-            {
-                VDi[0] = 0x89;    // 8 Implica Tipo de Mjs Unicast, el 9 es el largo del mjs del ping de Spam
-            }
-            else
-            {
-                VDi[0] = 0x85;    // 8 Implica Tipo de Mjs Unicast, el 5 es el largo del mjs
-            }
-#endif // Calculo de Largo del Mensaje
-            VDi[1] = rxMessage.SourceAddress[0];      // NID
-            VDi[2] = rxMessage.Payload[0];            // MID
-            VDi[3] = rxMessage.Payload[1];            // FN
-            VDi[4] = rxMessage.Payload[2];            // DATA
-            VDi[5] = rxMessage.Payload[3];            // DAUX
-            VDi[6] = rxMessage.Payload[4];
-            VDi[7] = rxMessage.Payload[5];
-            VDi[8] = rxMessage.Payload[6];
-            VDi[9] = rxMessage.Payload[7];
-            VDi[10] = rxMessage.Payload[8];      
-            VDi[11] = rxMessage.Payload[9];
-        }
-        else
-        {
-            // agregar aqui las FNs mas largas
-        }
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-
-}
-
-void DoTxMw(INPUT BYTE addr,INPUT BIT FBc)
-{
-    uint8_t i;
-
-    MiApp_FlushTx();
-
-    for(i = 0; i < 10; i++)
-    {
-        MiApp_WriteData(VDoMW[i]);
-    }
-
-    TargetLongAddress[0] = addr;
-
-    if(FBc == 0)        // Verifico si es unicast o broadcast
-    {
-        if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 1° intento de mandar el mjs
-        {
-             delay_us (10);
-             if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 2° intento de mandar el mjs
-             {
-                delay_us (10);
-                 if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 3° intento de mandar el mjs
-                 {
-                     delay_us (10);
-                     if(!MiApp_UnicastAddress(TargetLongAddress,true,false))     // 4° intento de mandar el mjs
-                     {
-                     }
-                 }
-             }
-        }
-    }
-    else
-    {
-        if(!MiApp_BroadcastPacket( false ))     // 1° intento de mandar el mjs
-        {
-             delay_ms (1);
-        }
-        if(!MiApp_BroadcastPacket( false ))     // 2° intento de mandar el mjs
-        {
-             delay_ms (1);
-        }
-        if(!MiApp_BroadcastPacket( false ))     // 3° intento de mandar el mjs
-        {
-             delay_ms (1);
-        }
-    }
-    MessagePending = false;
-    TransmitPending = false;
-    TxMessageSize = 0;
-//    DTxt("Transmiti algo Por MiWi");
-}
-
-bool ChkRxU1()
-{
-    uint8_t LMsj, descarte;       //Longitud del MSJ a recibir
-    uint8_t i;          //Contador
-
-    if(FPU1 == 0) // Verifico si esta presente el Modulo SPI-USART - Usart 1 Virtual
-    {
-        return false; // no hay modulo presente.
-    }
-
-    if(Uart1_R == 0)    
-    {
-        return false;   //Si no hay peticion de datos por SPI retorno con false
-    }
-    //Si llego aca es xq estoy recibiendo un paquete
-    RFIE = 0;
-    SSPCON1 = 0x22;
-
-    i=0;
-
-    //Recibo el primer byte
-    Uart1_CS = 0;       //Activo el Chip Select
-    delay_us(1);
-    VDi[0] = SPIGet();
-    Uart1_CS = 1;       //Desactivo el Chip Select
-
-    __delay_us(10);
-
-    LMsj = VDi[0] & 0x0F;      //Tomo la longitud del Msj a recibir
-
-#if 1
-    if(LMsj > 11)
-    {
-        LMsj = 11;
-    }
-#endif          //Verificacion del largo
-
-    while(i < LMsj)           
-    {
-        i++;
-        Uart1_CS = 0;       //Activo el Chip Select
-        delay_us(1);
-        VDi[i] = SPIGet();
-        Uart1_CS = 1;       //Desactivo el Chip Select
-        __delay_us(5);
-    }                       //Aca recibire todo Byte a Byte hasta q se termine
-    LED_U1 = 1;
-    OpenTimer2(TIMER_INT_ON & T2_PS_1_16 & T2_POST_1_4);        //Activaré el timer para verificar si el SPI/USART no me destraba
-    PIE1bits.TMR2IE = 1;                                        //Interrupcion del Timer 2 habilitada
-    TMR2 = 0X51;                                                //Para contar 700 uSeg, el SPI USART nunca debería dejarme mas de 500 clavado
-    while(Uart1_R == 1)     //Este sería el único lugar donde podría clavarme
-    {
-        if(FOVFT2 == 1)//Aca deberé ver que hacer si me interrumpe el TMR2
-        {
-            FOVFT2 = 0;
-            FPU1 = 0;    //Debería poner un flag para dejar de verificar este SPI
-            FEMISO1 = 1;    //Y pongo a 1 el flag para reportar el error
-            goto OVFU1;
-        }
-    }
-OVFU1:
-    PIE1bits.TMR2IE = 0;    //Dehabilito la Interrupción
-    CloseTimer2();
-    SSPCON1 = 0x21;
-    RFIE = 1;
-    return true;
-
-}
-
-bool ChkRxU2()
-{
-   uint8_t LMsj, descarte;       //Longitud del MSJ a recibir
-    uint8_t i;          //Contador
-    if(FPU2 == 0) // Verifico si esta presente el Modulo SPI-USART - Usart 1 Virtual
-    {
-        return false; // no hay modulo presente.
-    }
-    if(Uart2_R == 0)
-    {
-        return false;   //Si no hay peticion de datos por SPI retorno con false
-    }
-    //Si llego aca es xq estoy recibiendo un paquete
-    RFIE = 0;
-    SSPCON1 = 0x22;
-    i=0;
-    //Recibo el primer byte
-    Uart2_CS = 0;       //Activo el Chip Select
-    delay_us(1);
-    VDi[0] = SPIGet();
-    Uart2_CS = 1;       //Desactivo el Chip Select
-    __delay_us(10);
-    LMsj = VDi[0] & 0x0F;      //Tomo la longitud del Msj a recibir
-
-#if 1
-    if(LMsj > 11)
-    {
-        LMsj = 11;
-    }
-#endif          //Verificacion del largo
-    while(i < LMsj)
-    {
-        i++;
-        Uart2_CS = 0;       //Activo el Chip Select
-        delay_us(1);
-        VDi[i] = SPIGet();
-        Uart2_CS = 1;       //Desactivo el Chip Select
-        __delay_us(5);
-    }                       //Aca recibire todo Byte a Byte hasta q se termine
-    LED_U2 = 1;
-
-    OpenTimer2(TIMER_INT_ON & T2_PS_1_16 & T2_POST_1_4);        //Activaré el timer para verificar si el SPI/USART no me destraba
-    PIE1bits.TMR2IE = 1;                                        //Interrupcion del Timer 2 habilitada
-    TMR2 = 0X51;                                                //Para contar 700 uSeg, el SPI USART nunca debería dejarme mas de 500 clavado
-    while(Uart2_R == 1)     //Este sería el único lugar donde podría clavarme
-    {
-        if(FOVFT2 == 1)//Aca deberé ver que hacer si me interrumpe el TMR2
-        {
-            FOVFT2 = 0;
-            FPU2 = 0;       //Debería poner un flag para dejar de verificar este SPI
-            FEMISO2 = 1;
-            goto OVFU2;
-        }//Aca deberé ver que hacer si me interrumpe el TMR2
-    }
-OVFU2:
-    PIE1bits.TMR2IE = 0;    //Dehabilito la Interrupción
-    CloseTimer2();
-    SSPCON1 = 0x21;
-
-    RFIE = 1;
-    return true;
-}
-
-void DoTxU1()
-{                       //Los datos a enviar ya se encuentran en VDo
-    uint8_t i, LMsj;
-    if(Uart1_R == 1)        //Si me estan intentando enviar un MSJ por SPI
-    {                       //Primero deberé recibir tantas veces como el 1704 me lo pida
-        while(ChkRxU1())   // <-- Usart 1 / Consulta si llegaron Datos de algun Repetidor
-        {
-            if(ChkNoRed())  // Chekea la No Redundancia del mjs, para ver si no se habia enviado ya ese mjs
-            {
-                 Encolar();  // Debo retransmitir al PAN
-            }
-            delay_us(20);   //Este delay será para darle tiempo al 1704 de preparar el sgte dato
-        }
-    }
-    LMsj = VDo[0] & 0x0F;      //Cargo la longitud del Msj
-    i=0;
-    RFIE = 0;
-    SSPCON1 = 0x22;
-    while(i <= LMsj)        //Envio BYTE a BYTE
-    {
-        Uart1_CS = 0;           //Activo el Chip Select
-        delay_us(1);       //Atento a esto ***********************************
-        SPIPut(VDo[i]);
-        Uart1_CS = 1;       //Desactivo el Chip Select
-        __delay_us(5);
-        i++;
-    }
-    SSPCON1 = 0x21;
-    RFIE = 1;
-}
-
-void DoTxU2()          
-{
-    uint8_t i, LMsj;
-
-    if(Uart2_R == 1)        //Si me estan intentando enviar un MSJ por SPI
-    {                       //Primero deberé recibir tantas veces como el 1704 me lo pida
-        while(ChkRxU2())   // <-- Usart 1 / Consulta si llegaron Datos de algun Repetidor
-        {
-            if(ChkNoRed())  // Chekea la No Redundancia del mjs, para ver si no se habia enviado ya ese mjs
-            {
-                 Encolar();  // Debo retransmitir al PAN
-            }
-            delay_us(20);   //Este delay será para darle tiempo al 1704 de preparar el sgte dato
-        }
-    }
-    LMsj = VDo[0] & 0x0F;      //Cargo la longitud del Msj
-    i=0;
-    RFIE = 0;
-    SSPCON1 = 0x22;
-    while(i <= LMsj)        //Envio BYTE a BYTE
-    {
-        Uart2_CS = 0;           //Activo el Chip Select
-        delay_us(1);       //Atento a esto ***********************************
-        SPIPut(VDo[i]);
-        Uart2_CS = 1;       //Desactivo el Chip Select
-        __delay_us(5);
-        i++;
-    }
-    SSPCON1 = 0x21;
-    RFIE = 1;
-}
-
-void DoTxMDL(uint8_t NMod)
-{                       //Los datos a enviar ya se encuentran en VDo
-    uint8_t i, LMsj, j, dato, o;
-    BIT Fo;
-    uint16_t of=0;
-    switch (NMod)   // Verifico que este presente el Modulo al que se mando a transmitir
-    {
-            case(1):
-                if(FMDL1 == 0)
-                {
-                    return;
-                }
-                break;
-
-            case(2):
-                if(FMDL2 == 0)
-                {
-                    return;
-                }
-                break;
-
-            case(3):
-                if(FMDL3 == 0)
-                {
-                    return;
-                }
-                break;
-
-            default:
-                return;
-    }
-    RFIE = 0;
-    SSPCON1 = 0x22;     //Ajusto la velocidad a la max soportada por el 1709
-    for(i = 0; i < 9; i++)
-    {
-        if(NMod == 1) Mod5_CS = 0;     //Activo el Chip Select Modulo 1 de luces
-        if(NMod == 2) Mod4_CS = 0;     //Activo el Chip Select Modulo 2 de luces
-        if(NMod == 3) Mod3_CS = 0;     //Activo el Chip Select Modulo 3 de luces
-        __delay_us(1);
-        SPIPut(VDa[i]);
-        if(NMod == 1) Mod5_CS = 1;     //Desactivo el Chip Select Modulo 1 de luces
-        if(NMod == 2) Mod4_CS = 1;     //Desactivo el Chip Select Modulo 2 de luces
-        if(NMod == 3) Mod3_CS = 1;     //Desactivo el Chip Select Modulo 3 de luces
-        __delay_us(5);        
-    }
-    SSPCON1 = 0x21;     // Reajuso la velocidad para MiWi y la PAntalla
-    RFIE = 1;
-}
-
-void ChkMjs()
-{
-    BYTE i;
-
-    if (VDi[0] < 200)
-    {
-        FN = VDi[0];      // Adquiero las Vbles
-        DATA = VDi[1];
-        DAUX = VDi[2];
-        ChkFnMIWI();
-        return;
-    }
-
-    if((VDi[0] > 201) | (VDi[0] < 210))     // Intervalo dentro del cual viene un Broadcast no seguro
-    {
-        if((VDi[1] == 128)|(VDi[1] == 0)) // Tipo de Dispositivo   (O si es a todos)
-        {
-            if((VDi[2] == EQUIPO)|(VDi[2] == 0)) // Equipo al que pertenece
-            {
-                switch (VDi[0])
-                {
-                    case(202):      // Broadcast Simple
-                    {
-                        FN = VDi[3];      //Adquiero las Vbles
-                        DATA = VDi[4];
-                        DAUX = VDi[5];
-                        ChkFnMIWI();
-                        break;
-                    }
-
-                }
-                return;
-            }
-        }
-    }
-    if(VDi[0] == 210) // Puerto bruto de datos
-    {
-        switch (Fn210)
-        {
-            case(0):    // No hay ninguna Fn Asignada!
-            {
-                SBS(2,2);
-                break;
-            }
-
-        }
-    }
-}
-
-void Encolar()
-{                       // Hay que Guardar un dato en la Cola
-    uint8_t i, Aux;
-
-    Aux = VDi[0] & 0x0F; // determino el largo del Mjs a guardar
-    if((LVCola - NRAC) >= Aux)     // Verifico si entra en Memoria
-    {
-
-#if 1
-        if((VDi[3]==0)&&(VDi[4]==4))      // Ping de Spam: FN=0 - DATA=4
-        {
-            if(FEMISO1 == 1 && VDi[8] == 0)     //Si tengo que informar un error de MISO y el msj no tiene ningún error informado ya
-            {
-                FEMISO1 = 0;
-                VDi[8] = LNID;
-                VDi[9] = 7;
-            }
-            if(FEMOSI1 == 1 && VDi[8] == 0)     //Si tengo que informar un error de MOSI y el msj no tiene ningún error informado ya
-            {
-                FEMOSI1 = 0;
-                VDi[8] = LNID;
-                VDi[9] = 8;
-            }
-            if(FEMISO2 == 1 && VDi[8] == 0)     //Si tengo que informar un error de MISO y el msj no tiene ningún error informado ya
-            {
-                FEMISO2 = 0;
-                VDi[8] = LNID;
-                VDi[9] = 9;
-            }
-            if(FEMOSI2 == 1 && VDi[8] == 0)     //Si tengo que informar un error de MOSI y el msj no tiene ningún error informado ya
-            {
-                FEMOSI2 = 0;
-                VDi[8] = LNID;
-                VDi[9] = 10;
-            }
-            if(FENACK == 1 && VDi[8] == 0)     //Si tengo que informar un error de MOSI y el msj no tiene ningún error informado ya
-            {
-                FENACK = 0;
-                VDi[8] = LNID;
-                VDi[9] = 1;
-            }
-            if(FECRC == 1 && VDi[8] == 0)     //Si tengo que informar un error de MOSI y el msj no tiene ningún error informado ya
-            {
-                FECRC = 0;
-                VDi[8] = LNID;
-                VDi[9] = 2;
-            }
-        }
-#endif  // Verifica Ping de Spam para informar errores MISO y MOSI y NACK
-
-        for(i = 0; i <= Aux; i++)
-        {
-            VCola[NRAC+i] = VDi[i]; // Se cargan los Datos para Encolarlos
-        }
-
-        NRAC = NRAC + Aux + 1;  // Dejamos el NRAC apuntando al proximo lugar libre en el VCola
-
-#if 1
-            if((VDi[3] == 0)&&(VDi[4] == 4))     // Verifico si encolé un Ping de Spam
-            {
-                if(VDi[8] == 0)     // Verifico que SUID sea cero (osea que nadie reporto un error)
-                {
-                    if(NRAC < NRAC25)   // verifico si esta entre 0-25%
-                    {
-                        if(NRACP != 0)  // Verifico si ya habia reportado esto
-                        {
-                            NRACP = 0;
-                            VCola[NRAC-2] = LNID;
-                            VCola[NRAC-1] = 3;      // Cod de error
-                        }
-                    }
-
-                    if((NRAC >= NRAC25)&&(NRAC < NRAC50))  // verifico si esta entre 25-50%
-                    {
-                        if(NRACP != 25)  // Verifico si ya habia reportado esto
-                        {
-                            NRACP = 25;
-                            VCola[NRAC-2] = LNID;
-                            VCola[NRAC-1] = 4;      // Cod de error
-                        }
-                    }
-
-                    if((NRAC >= NRAC50)&&(NRAC < NRAC75))  // verifico si esta entre 50-75%
-                    {
-                        if(NRACP != 50)  // Verifico si ya habia reportado esto
-                        {
-                            NRACP = 50;
-                            VCola[NRAC-2] = LNID;
-                            VCola[NRAC-1] = 5;      // Cod de error
-                        }
-                    }
-
-                    if(NRAC > NRAC75)   // verifico si esta entre 75-100%
-                    {
-                        if(NRACP != 75)  // Verifico si ya habia reportado esto
-                        {
-                            NRACP = 75;
-                            VCola[NRAC-2] = LNID;
-                            VCola[NRAC-1] = 6;      // Cod de error
-                        }
-                    }
-                }
-            }
-
-#endif // Generacion (si corresponde) de reporte en Ping de Spam
-    }
-    else
-    {
-        // Logica en caso de que no haya mas lugar para encolar
-    }
-}
-
-bool Dencolar()
-{
-    uint8_t i, Aux;
-
-    if(NRAC == 0) // Verifico si hay datos encolados
-    {
-        return false;   // No hay datos en cola
-    }
-    else
-    {
-        Aux = VCola[0] & 0x0F;    // Largo del Mjs en cola
-
-        for(i = 0; i <= Aux; i++)
-        {
-            VDo[i] = VCola[i]; // Se cargan los Datos para Dencolarlos
-        }
-
-        // Los datos solicitados estan disponible ya en VDo, ahora hay que desfragmentar Vcola, asi se libera espacio
-        Aux = Aux+1; // Aux queda apuntando al 1° dato del proximo Mjs en la cola
-        NRAC = NRAC - Aux;  // Genero el nuevo NRAC que quedara despues de desocpar la memoria con este mjs
-
-        if(NRAC != 0)   // Verifico si hay otros Mjs encolados
-        {
-            // Si hay mas datos, debo desfragmentar
-            for(i = 0; i < NRAC; i++)    // Se desfragmenta solo lo ocupado
-            {
-                VCola[i] = VCola[Aux+i];
-            }
-        }
-        return true; // Termina el proceso con los datos en VDo
-    }
-}
-
-void Protocolizador()       //Esta rutina toca SI O SI VTx. Se debe tener extremo cuidado a la hora de llamarla
-{
-    uint8_t i, j, Aux;
-    uint8_t CRC;
-
-    j = VDo[0] & 0B00001111;    // Largo del Mjs en cola
-    if(j > 11)
-    {
-        j = 11;
-    }
-    if(LNID == 0)   // Verifico si soy el PAN
-    {
-        VTx[3] = VDo[1];
-        for(i = 3; i <= j; i++)  // Armo el VTx sin el MID
-        {
-            VTx[1+i] = VDo[i];
-        }
-        j --; // Ya que saque el MID antes de enviarlo a la PC, decremento el largo del msj
-        VDo[0] --;
-    }
-    else
-    {
-        for(i = 1; i <= j; i++)   // Armo el VTx con el MID, ya que no va a la PC
-        {
-            VTx[2+i] = VDo[i];
-        }
-    }
-
-    VTx[0] = VDo[0];
-    if(LNID != 0)
-    {
-        i=0;
-        i = VTx[0] >> 6;
-        i = i & 0x03;
-        Aux = i;
-        i = VTx[0] & 0x0F;
-        Aux = Aux + i;
-        Aux = Aux << 4;
-        Aux = Aux & 0x30;
-        VTx[0] = VTx[0] | Aux;  // Armo el Mini CRC
-    }
-
-    VTx[2] = NSECTx;
-    VTx[1] = VTx[0];
-    for(i = 0; i <=j; i++)
-    {
-        VTx[1] = VTx[1] + VTx[i+2];  // VTx[1] = CRC / Armo el CRC
-    }
-    return;
-}
-
-bool ChkNoRed()
-{
-    uint8_t i, j;
-
-    if(VDi[1]<127)      // Verifico que el Msj provenga de un Nodo inalambrico
-    {
-        VTMID[VDi[1]] = 5;  //Utilizare el mismo puntero que cdo direcciono la matriz y
-                            //pondre un tiempo de 5. Cdo llegue a 0 limpiare dicha fila
-        for(i=0; i<10; i++)
-        {
-            if(VDi[2] == VCR[VDi[1]][i])
-            {
-                return false;         //Es un msj repetido. Voy a retornar "false" (Hay redundancia)
-            }
-        }
-                //Si llegué aca, es xq es un msj nuevo (No hay redundancia). Debo tomarlo y Actualizar Historial
-        for(i=9; i!=0; i--)
-        {
-            VCR[VDi[1]][i] = VCR[VDi[1]][i-1];
-        }
-        VCR[VDi[1]][0] = VDi[2];
-        
-    }
-    return true;
-}
-
-void WT3(uint16_t Time)
-{
-    WriteTimer3(Time);
-    OpenTimer3(TIMER_INT_ON & T3_16BIT_RW & T3_SOURCE_INT & T3_PS_1_8);
-    if (Time == TACK)       //Si estoy escribiendo TACK en el TMR lo indicare con el flag
-    {
-        FTMR3ACK = 1;
-    }
-    else
-    {
-        FTMR3ACK = 0;
-    }
-}
-
-#endif // Comms Repetidor
 
 
 #if 1
@@ -2286,10 +1243,19 @@ bool ChkRxU0()
            if(VRx[2] == VRx[1])         // Verifica CRC
            {
                DTxt("CRC OK!, verificando Nro de Sec...");
-                if(VRx[1] == NSECTx)  // Nro de secuencia del ACK está bien? (con respecto al msj enviado)
+               if(NSECTx == 0)
+               {
+                   Aux = 255;
+               }
+               else
+               {
+                   Aux = NSECTx -1;
+               }
+                if(VRx[1] == Aux)  // Nro de secuencia del ACK está bien? (con respecto al msj enviado)
                 {
                    DTxt("Nro de Sec OK!!! - ACK OK!");
                     FACK_W = 0;      // Dejo de esperar el ACK
+                    CloseTimer3();     // apaga el timer, ya que llego todo bien
                 }
                 else
                 {
@@ -2498,7 +1464,7 @@ void Protocolizador()       //Esta rutina toca SI O SI VTx. Se debe tener extrem
    }
 
    VTx[1] = NSECTx;
-
+   NSECTx++;
    CRC_16 = 0;
    for(i = 0; i <19; i++)
    {
@@ -2696,7 +1662,7 @@ void Chk_Botones()
                 FTPB2 = 1;
 #endif
 #if 1
-                VDi[0] = 1; // NID
+                VDi[0] = 2; // NID
                 VDi[1] = 1; // FN
                 VDi[2] = 2; // Data
                 for(i=3; i<19; i++)
@@ -2729,7 +1695,21 @@ void Chk_Botones()
 #endif
 #endif  // Boton 2
 
-#if 1
+
+
+    if(Boton_1 == 1)
+    {
+                VDi[0] = 3; // NID
+                VDi[1] = 1; // FN
+                VDi[2] = 3; // Data
+                for(i=3; i<19; i++)
+                {
+                    VDi[i]=0;
+                }
+                Encolar();
+    }
+    
+#if 0
 #if 1
     if(Boton_3 == 1)
     {
@@ -2749,7 +1729,7 @@ void Chk_Botones()
                 FTPB3 = 1;
 #endif
 #if 1
-                VDi[0] = 1; // NID
+                VDi[0] = 3; // NID
                 VDi[1] = 1; // FN
                 VDi[2] = 3; // Data
                 for(i=3; i<19; i++)
@@ -2801,15 +1781,16 @@ void Chk_Botones()
                 FTPB4 = 1;
 #endif
 #if 1
-                VDi[0] = 1; // NID
+                VDi[0] = 4; // NID
                 VDi[1] = 1; // FN
-                VDi[2] = 4; // Data
+                VDi[2] = 1; // Data
                 for(i=3; i<19; i++)
                 {
                     VDi[i]=0;
                 }
                 Encolar();
                 DTxt("Boton 4 Presionado");
+                Reset();
 #endif                          //      < -------- Accion del boton 4
 #if 1
             }
@@ -3209,7 +2190,7 @@ void interrupt high_priority nuestra()
             FTxU0 = 0;          // Indico que termina la trasnmision
             if(FACK_W == 1)     // Pregunto si estaba esperando un ACK
             {
-                //WT3(TACK);      // Iniciamos el Timer esperando el ACK   FNAF
+                WT3(TACK);      // Iniciamos el Timer esperando el ACK   FNAF
             }
             PIE1bits.TXIE = 0;  // Apago interrupciones de USART Tx
         }
@@ -3222,7 +2203,7 @@ void interrupt high_priority nuestra()
     if (PIR1bits.RCIF == 1) // USART/RX - Recepcion de Mensajes del PAN
     {
         VRx_Aux[ORx] = RCREG;
-        //WT3(TRx); // Iniciamos el Timer para resetear la recepcion si no llega el byte que sigue
+        WT3(TRx); // Iniciamos el Timer para resetear la recepcion si no llega el byte que sigue
         if(ORx == 1)    // verifico si es el primer byte 
         {
             if(VRx_Aux[ORx] == 0)   // verifico si es un ACK
@@ -3251,7 +2232,7 @@ void interrupt high_priority nuestra()
             ORx = 0;         // reinicia el contador de byte recibido, para la proxima recepcion
             if(FACK_W == 1) // Pregunto si estaba esperando un ACK
             {
-              //  WT3(TACK); // Iniciamos el Timer esperando el ACK
+                WT3(TACK); // Iniciamos el Timer esperando el ACK
             }
             else
             {
@@ -3270,7 +2251,7 @@ void interrupt high_priority nuestra()
 
 #endif // USART/RX - Recepcion de Mensajes del PAN
 
-#if 0
+#if 1
     if (PIR2bits.TMR3IF == 1)   // Timer 3 Auxiliar de Rx Usart
     {
         PIR2bits.TMR3IF = 0; // Apagamos el motivo de la interrupcion
@@ -3283,7 +2264,7 @@ void interrupt high_priority nuestra()
         }
         else
         { // En plena recepcion nunca llego el proximo byte
-            ORx = 0;         // reinicia el contador de byte recibido, para la proxima recepcion
+            ORx = 1;         // reinicia el contador de byte recibido, para la proxima recepcion
             if(FACK_W == 1)
             {
                 WT3(TACK);   // Si estaba esperando un ACK, reinicio la cuenta
@@ -3915,6 +2896,12 @@ void DTs()
         {
             DTS_y = DTS_y - 10;
         }
+
+        for(DTS_x = 0; DTS_x <7 ; DTS_x ++)
+        {
+            DrawChar(DTS_y, (DTS_x*6)+1, " ", YELLOW, DARKGREY, 1); // Borro el proximo renglon
+        }
+        DTS_x = 0;
 #endif                      // Manejo de coordenadas en la pantalla
 
         Largo = 0;
