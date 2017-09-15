@@ -1000,6 +1000,7 @@ uint8_t i;
     FOVFT2 = 0;
     NSECRx = 0;
     ORx =1;
+    NRAC = 0;
 
 #if 1
 
@@ -1384,10 +1385,14 @@ void DoTxU0()
    {
        Protocolizador();   // Esta rutina arma el mjs para ser enviado por RS232 y inicia el proceso de enviado.
        //VTx[1] = 1;
-       for(uint8_t i=0; i<23; i++)
-       {
-         // D1(VTx[i], RED);
-       }
+//       for(uint8_t i=0; i<23; i++)
+//       {
+//            D1(VTx[i], RED);
+//       }
+//       while(Boton_4 == 0)
+//       {
+//
+//       }
        TXREG = VTx[0]; // Envio el 1° byte, el resto sera por Interrupcion
        //DTxt("Byte 1 de un Dato enviado");
 
@@ -1407,13 +1412,11 @@ void Encolar()
     
     if((LVCola - NRAC) >= 18)     // Verifico si entra en Memoria 18 (bytes son necesarios)
     {
-        for(i = 1; i <= 19; i++)
+        for(i = 0; i <= 17; i++)
         {
-            VCola[NRAC+i-1] = VDi[i]; // Se cargan los Datos para Encolarlos
+            VCola[NRAC+i] = VDi[i]; // Se cargan los Datos para Encolarlos
         }
-
         NRAC = NRAC + 18;  // Dejamos el NRAC apuntando al proximo lugar libre en el VCola
-
     }
     else
     {
@@ -1431,7 +1434,7 @@ bool Dencolar()
     }
     else
     {
-        for(i = 0; i <= 18; i++)
+        for(i = 0; i <= 17; i++)
         {
             VDo[i] = VCola[i]; // Se cargan los Datos para Dencolarlos
         }
