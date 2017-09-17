@@ -61,7 +61,7 @@
 
 // Constantes
 
-#define TRx   0xB1DF  // 63BF(20ms) B1DF(10ms) FCDF (400 uS) FE6F(200 uS) FF37(100 us) para la espera entre byte y byte
+#define TRx   0xFCDF  // 63BF(20ms) B1DF(10ms) FCDF (400 uS) FE6F(200 uS) FF37(100 us) para la espera entre byte y byte
 #define TACK  0x159F  // 159F(30ms) para esperar el ACK , sino reenvio el Mjs
 
  uint8_t FN;
@@ -604,6 +604,7 @@ uint8_t DTS_x_m;     // Posición de X Maxima
 uint8_t DTS_y_t;    // Valor Top de Y
 uint8_t DTS_y_b;    // Valor Bottom de Y
 uint8_t PCM;        // Próximo caracter a mostrar
+BIT FBorradoNextRenglon; // Sirve para borrar el proximo renglon al terminar de escribir el actual
 
 uint16_t Mains_Max;     //Limite maximo de Mains por segundo (GUARDADO EN EEPROM)
 uint16_t Mains_Min;     //Limite minimo de Mains por segundo (GUARDADO EN EEPROM)
@@ -854,7 +855,7 @@ void PoolRxU0(void);
 void PoolTxU0(void);
 void Chk_BDebug(void);
 
-void DTxt(uint8_t ToShow[48]);
+void DTxt(uint16_t Color, uint8_t ToShow[45]);
 void DTs(void);
 void Monitor_Recursos(void);
 
@@ -869,11 +870,11 @@ void main(void) // PROGRAMA PRINCIPAL
 {
     Inicializar_Micro(); // CONFIGURA EL MICRO
     Inicializar_Valores(); // Valores por defecto necesarios
-    DTxt("v0.2 Emula 4 eMozos distintos - Con Timer WT3");
+    DTxt(RED, "v0.4 Protocolo Estable al 17/9/17");
     Inicializar_Pantalla();
    // DTxt("Ejecutando Secuencia de Booteo...");
     //Bootear();
-    DTxt("Inicio Completo, ejecutando el While(1) {...}");
+    DTxt(GREEN, "Inicio Completo, ejecutando el While(1) {...}");
 
     while (1) // Programa Principal  * * * NO OLVIDAR EL WDT * * *
     {
@@ -1146,7 +1147,9 @@ void Comms_Admin()
     if(ChkRxU0())   // <-- Usart 0 / Llegaron Datos de Aguas arriba ?
     {
 #if 1
-        DTxt(VDi);
+
+
+
 #if 0
             if(FBC == 1)             //Si es Broadcast debo utilizar otros valores de MID 201 - 255
             {
@@ -1230,7 +1233,7 @@ bool ChkRxU0()
            return false;      // no hay que generar ningun msj y no llego nada nuevo
        }
        FRxU0 = 0;
-       DTxt("Analizando Dato...");
+       DTxt(CYAN, "Analizando Dato...");
 #if 1
 
        for(i=0; i<23; i++)
@@ -1240,10 +1243,10 @@ bool ChkRxU0()
        if(VRx[0] == 0) // Verifico si es un  ACK
        {
 #if 1
-          DTxt("ACK Detectado, verificando CRC...");
+          DTxt(CYAN, "ACK Detectado, verificando CRC...");
            if(VRx[2] == VRx[1])         // Verifica CRC
            {
-               DTxt("CRC OK!, verificando Nro de Sec...");
+               DTxt(GREEN, "CRC OK!, verificando Nro de Sec...");
                if(NSECTx == 0)
                {
                    Aux = 255;
@@ -1254,19 +1257,19 @@ bool ChkRxU0()
                }
                 if(VRx[1] == Aux)  // Nro de secuencia del ACK está bien? (con respecto al msj enviado)
                 {
-                   DTxt("Nro de Sec OK!!! - ACK OK!");
+                   DTxt(GREEN, "Nro de Sec OK!!! - ACK OK!");
                     FACK_W = 0;      // Dejo de esperar el ACK
                     CloseTimer3();     // apaga el timer, ya que llego todo bien
                 }
                 else
                 {
-                    DTxt("Ups !  Nro de Sec MAL!!! Enviando NACK");
+                    DTxt(RED, "Ups !  Nro de Sec MAL!!! Enviando NACK");
                     FACK_TO = 1;     // N° de SEc mal, pido reenviar el ultimo msj
                 }
            }
            else
            {
-               DTxt("Ups! CRC MAL!!! Enviando NACK");
+               DTxt(RED, "Ups! CRC MAL!!! Enviando NACK");
                FACK_TO = 1;     // N° de SEc mal, pido reenviar el ultimo msj
            }
 #endif  //  **** Verificacion del ACK
@@ -1274,7 +1277,7 @@ bool ChkRxU0()
        }
        else
        {
-           DTxt("Dato Detectado, verificando CRC...");
+           DTxt(CYAN, "Dato Detectado, verificando CRC...");
 #if 1
            CRC_Rx = 0;
            CRC_Rx = VRx[20];
@@ -1289,11 +1292,11 @@ bool ChkRxU0()
            }
            if(CRC_Mk != CRC_Rx)     //Si no esta bn el control de CRC
            {
-               DTxt("Ups! CRC MAL!!!");
+               DTxt(RED, "Ups! CRC MAL!!!");
                FACK_P = 1;             //Activo el envío de  NACK al otro extremo
                return false;
            }
-           DTxt("CRC OK!!!, verificando Nro de Sec...");
+           DTxt(GREEN, "CRC OK!!!, verificando Nro de Sec...");
 #endif  //  **** Verificacion del CRC Data
        }
 
@@ -1305,11 +1308,12 @@ bool ChkRxU0()
       // D1(NSECRx, GREEN);
         if(VRx[1] != (Aux ))    // El numero de secuencia esta bien?
         {
-            DTxt("Ups! Nro de Sec MAL!!!");
+            DTxt(RED, "Ups! Nro de Sec MAL!!!");
             // El numero de secuencia es erroneo, dato no confiable. Envio un ACK con el ultimo numero de secuencia recibido correctamente
             if(CBNSec == 3)
             {
                 // Por cansacio, vamos a tomar como valido este N° de Secuencia
+                NSECRx = VRx[1];
                 goto NSecOK;
             }
             else
@@ -1321,7 +1325,7 @@ bool ChkRxU0()
         }
         else
         {
-            DTxt("Nro de Sec OK!!!");
+            DTxt(GREEN, "Nro de Sec OK!!!");
             // El numero de secuencia esta bien, dato confiable.
 NSecOK:     NSECRx ++;    //Actualizo el  Nro de Secuencia
             FACK_P = 1;         //Activo el envío de  ACK al otro extremo
@@ -1620,7 +1624,7 @@ void Chk_Botones()
                     VDi[i]=0;
                 }
                 Encolar();
-                DTxt("Boton 1 Presionado");
+                DTxt(BLUE, "Boton 1 Presionado");
 
 #endif                          //      < -------- Accion del boton 1
 #if 1
@@ -1673,7 +1677,7 @@ void Chk_Botones()
                     VDi[i]=0;
                 }
                 Encolar();
-                DTxt("Boton 2 Presionado");
+                DTxt(BLUE, "Boton 2 Presionado");
 
 #endif                          //      < -------- Accion del boton 2
 #if 1
@@ -1712,7 +1716,7 @@ void Chk_Botones()
                 Encolar();
     }
     
-#if 0
+#if 1
 #if 1
     if(Boton_3 == 1)
     {
@@ -1740,7 +1744,7 @@ void Chk_Botones()
                     VDi[i]=0;
                 }
                 Encolar();
-                DTxt("Boton 3 Presionado");
+                DTxt(BLUE, "Boton 3 Presionado");
 #endif                          //      < -------- Accion del boton 3
 #if 1
             }
@@ -1792,7 +1796,7 @@ void Chk_Botones()
                     VDi[i]=0;
                 }
                 Encolar();
-                DTxt("Boton 4 Presionado");
+                DTxt(BLUE, "Boton 4 Presionado");
                 Reset();
 #endif                          //      < -------- Accion del boton 4
 #if 1
@@ -2177,7 +2181,7 @@ void interrupt high_priority nuestra()
                     FTxU0 = 0;          // Indico que termina la trasnmision
                     PIE1bits.TXIE = 0;  // Apago interrupciones de USART Tx
                     FACK_T = 0;
-                    DTxt("ACK Enviado");
+                    DTxt(PINK, "ACK Enviado");
                     break;
                 }
             }
@@ -2188,7 +2192,7 @@ void interrupt high_priority nuestra()
         }
         if(OTx == 22)       //Si es 24 acabo de terminar de mandar un msj, si es 1 acabo de terminar de mandar un ACK
         {
-            DTxt("Dato Enviado");
+            DTxt(PINK, "Dato Enviado");
             OTx = 0;            //Pongo el Orden a "0" para que al salir termine en "1"
             FTxU0 = 0;          // Indico que termina la trasnmision
             if(FACK_W == 1)     // Pregunto si estaba esperando un ACK
@@ -2226,11 +2230,11 @@ void interrupt high_priority nuestra()
             FRxU0 = 1;         // indica que ya se recibió el Mjs de la PC
             if(ORx == 23)
             {
-                DTxt("Dato Recibido");
+                DTxt(PINK, "Dato Recibido");
             }
             if(ORx == 5)
             {
-                DTxt("ACK Recibido");
+                DTxt(PINK, "ACK Recibido");
             }
             ORx = 0;         // reinicia el contador de byte recibido, para la proxima recepcion
             if(FACK_W == 1) // Pregunto si estaba esperando un ACK
@@ -2785,18 +2789,18 @@ uint8_t AuxCD;
 
 }
 
-void DTxt(uint8_t ToShow[45])
+void DTxt(uint16_t Color, uint8_t ToShow[45])
 {
     uint8_t Largo=0;
-    uint16_t fin;
-    
+    uint16_t fin, Aux16;
+
     while(ToShow[Largo] != '\0')
     {
         Largo++;                    // Determino el largo de la cadena ingresada
     }
     Largo++;
 
-    fin = NTA+Largo+8;  // Posición inicial + Cadena de Texto + Min/Seg/mSeg/Espacio
+    fin = NTA+Largo+8;  // Posición inicial + Cadena de Texto + Min/Seg/mSeg/Espacio + color
 
     if(fin > NTA_MAX)
     {
@@ -2806,12 +2810,13 @@ void DTxt(uint8_t ToShow[45])
         }
         return;
     }
+    Aux16 = Color;
 
     Debug_Text[NTA] = 48 + (Debug_Time_m / 10 );
     NTA++;
     Debug_Text[NTA] = 48 + (Debug_Time_m % 10);
     NTA++;
-    Debug_Text[NTA] = 48 + (Debug_Time_s / 10 );
+    Debug_Text[NTA] = 48 + (Debug_Time_s / 10);
     NTA++;
     Debug_Text[NTA] = 48 + (Debug_Time_s % 10);
     NTA++;
@@ -2819,7 +2824,7 @@ void DTxt(uint8_t ToShow[45])
     NTA++;
     Debug_Text[NTA] = 48 + (Debug_Time_ms / 10 % 10);
     NTA++;
-    Debug_Text[NTA] = 48 +  (Debug_Time_ms % 10);
+    Debug_Text[NTA] = 48 + (Debug_Time_ms % 10);
     NTA++;
     Debug_Text[NTA] = 32; // Espacio ¬ ¬
     NTA++;
@@ -2834,7 +2839,12 @@ void DTxt(uint8_t ToShow[45])
         Largo++;
         NTA++;
     }
-    
+    Aux16 = Aux16 >>8;
+    Debug_Text[NTA] = (Aux16 & 0x00FF); // Parte Alta del Color
+    NTA++;
+    Debug_Text[NTA] = (Color & 0x00FF); // Parte Baja del Color
+    NTA++;
+
 }
 
 void DTs()
@@ -2844,136 +2854,162 @@ void DTs()
         return;
     }
 
-    uint16_t color;
-    uint16_t i;
-    uint16_t Largo = 0;
+    uint16_t color, Aux16;
+    uint8_t i;
+    uint8_t Largo = 0;
 
-    if(DTS_x_m == 0)        // Verifico si es el primer caracter que dibujo
+
+
+    if(FBorradoNextRenglon == 0)
     {
-        while(Debug_Text[DTS_x_m] != '\0')
+        if(DTS_x_m == 0)        // Verifico si es el primer caracter que dibujo
         {
-            DTS_x_m++;
+            while(Debug_Text[DTS_x_m] != '\0')
+            {
+                DTS_x_m++;
+            }
+            //DTS_x_m++;                // Obtengo el largo de la nueva cadena de texto
         }
-        //DTS_x_m++;                // Obtengo el largo de la nueva cadena de texto
-    }
-  
-    
-    if(DTS_x < 2)
-    {
-        color = BLUE;  // Minutos (2 digitos)
-    }
-    else
-    {
-        if(DTS_x < 4)
+
+
+        if(DTS_x < 2)
         {
-            color = GREEN;  // Segundos (2 digitos)
+            color = BLUE;  // Minutos (2 digitos)
         }
         else
         {
-            if(DTS_x < 7)
+            if(DTS_x < 4)
             {
-                color = YELLOW; // Mili Segundos (3 digitos)
+                color = GREEN;  // Segundos (2 digitos)
             }
             else
             {
-                color = WHITE;  // Mensaje de Texo (47 caracteres)
-            }
-        }
-    }
-
-
-    DrawChar(DTS_y, (DTS_x*6)+1, Debug_Text[DTS_x], color, BLACK, 1);
-    DTS_x ++;
-    if(DTS_x == DTS_x_m)        // Verifico si ya dibujé el ultimo caracter del renglón
-    {
-            DTS_x_m = 0;
-
-#if 1
-        DTS_x = 0;              // Reinicio el contador en el renglón 
-
-        if(DTS_y <= DTS_y_b)
-        {
-            DTS_y = DTS_y_t - 10;
-        }
-        else
-        {
-            DTS_y = DTS_y - 10;
-        }
-
-        for(DTS_x = 0; DTS_x <7 ; DTS_x ++)
-        {
-            DrawChar(DTS_y, (DTS_x*6)+1, " ", YELLOW, DARKGREY, 1); // Borro el proximo renglon
-        }
-        DTS_x = 0;
-#endif                      // Manejo de coordenadas en la pantalla
-
-        Largo = 0;
-        while(Debug_Text[Largo] != '\0')    
-        {
-            Largo++;            
-        }        
-        Largo++;                // Obtengo el largo de la cadena de texto
-        
-        if(NTA == Largo)        // Verifico si quedan mensajes
-        {
-            NTA = 0;            // No hay mas por mostrar
-            DTS_x_m = 0;
-        }
-        else
-        {
-            for(i = 0; i <= (NTA-Largo) ; i++)
-            {
-                Debug_Text[i] = Debug_Text[Largo+i];   // Hay todavia mensajes por mostrar, desfragmento
-            }
-            NTA = NTA - Largo; // Libero lugar en el buffer
-        }
-        
-        if(CMP != 0)            // Verifico si perdi mensajes mientras dibujaba
-        {
-            if(CMP<10)      // Largo del mensaje de error
-            {
-                Largo = 10;
-            }
-            else
-            {
-                Largo = 11;
-            }
-            if((NTA_MAX-NTA)>= Largo)   //Verifico si entra el mensaje de error
-            {
-                Debug_Text[NTA] = 48 + (Debug_Time_m / 10 );
-                NTA++;
-                Debug_Text[NTA] = 48 + (Debug_Time_m % 10);
-                NTA++;
-                Debug_Text[NTA] = 48 + (Debug_Time_s / 10 );
-                NTA++;
-                Debug_Text[NTA] = 48 + (Debug_Time_s % 10);
-                NTA++;
-                Debug_Text[NTA] = 48 + (Debug_Time_ms / 100);
-                NTA++;
-                Debug_Text[NTA] = 48 + (Debug_Time_ms / 10 % 10);
-                NTA++;
-                Debug_Text[NTA] = 48 +  (Debug_Time_ms % 10);
-                NTA++;
-                Debug_Text[NTA] = 45; // "-" indicador de comando interno
-                NTA++;
-                if(CMP < 10)
+                if(DTS_x < 7)
                 {
-                    Debug_Text[NTA] = 48 +  CMP;        // Es de un solo dígito la cantidad de mensajes perdidos
-                    NTA++;
+                    color = YELLOW; // Mili Segundos (3 digitos)
                 }
                 else
                 {
-                    Debug_Text[NTA] = 48 + (CMP / 10 ); // Es de mas de un dígito la cantidad de mensajes perdidos
-                    NTA++;
-                    Debug_Text[NTA] = 48 + (CMP % 10);  // (voy a suponer que no habrá mas de 99 perdidos.. osea... no samo tan qliao!!!)
-                    NTA++;
+                    // Mensaje de Texo (47 caracteres)
+                    color = 0;
+                    color = Debug_Text[DTS_x_m+1];  // Parte alta del Color
+                    color = color << 8;
+                    color = color + Debug_Text[DTS_x_m+2]; // Parte baja del Color
                 }
-                Debug_Text[NTA] = 0;
-                NTA++;
-                CMP = 0;    // Acabo de mandar a informar los mensajes que perdí, reinicio la cuenta
+            }
+        }
+
+        DrawChar(DTS_y, (DTS_x*6)+1, Debug_Text[DTS_x], color, BLACK, 1);
+        DTS_x ++;
+        if(DTS_x == DTS_x_m)        // Verifico si ya dibujé el ultimo caracter del renglón
+        {
+
+            FBorradoNextRenglon = 1;    // Indico que acabo de escribir todo el texo, ahora debo borrar el proximo renglon
+    #if 1
+            DTS_x = 0;              // Reinicio el contador en el renglón
+
+            if(DTS_y <= DTS_y_b)
+            {
+                DTS_y = DTS_y_t - 10;
+            }
+            else
+            {
+                DTS_y = DTS_y - 10;
+            }
+        }
+
+    #endif                      // Manejo de coordenadas en la pantalla
+
+    }
+    else
+    {
+
+        DrawChar(DTS_y, (DTS_x*6)+1, ' ', DARKGREY, BLACK, 1);
+        DTS_x ++;
+
+        if(DTS_x == 53)
+        {
+            FBorradoNextRenglon = 0;
+            DTS_x = 0;              // Reinicio el contador en el renglón
+            Largo = 0;
+            DTS_x_m = 0;
+            while(Debug_Text[Largo] != '\0')
+            {
+                Largo++;
+            }
+            Largo = Largo + 3;                // Obtengo el largo de la cadena de texto + Color
+
+            if(NTA == Largo)        // Verifico si quedan mensajes
+            {
+                NTA = 0;            // No hay mas por mostrar
+                DTS_x_m = 0;
+            }
+            else
+            {
+                for(i = 0; i <= (NTA-Largo) ; i++)
+                {
+                    Debug_Text[i] = Debug_Text[Largo+i];   // Hay todavia mensajes por mostrar, desfragmento
+                }
+                NTA = NTA - Largo; // Libero lugar en el buffer
+            }
+
+            if(CMP != 0)            // Verifico si perdi mensajes mientras dibujaba
+            {
+                if(CMP<10)      // Largo del mensaje de error
+                {
+                    Largo = 12;
+                }
+                else
+                {
+                    Largo = 13;
+                }
+                if((NTA_MAX-NTA)>= Largo)   //Verifico si entra el mensaje de error
+                {
+                    Debug_Text[NTA] = 48 + (Debug_Time_m / 10 );
+                    NTA++;
+                    Debug_Text[NTA] = 48 + (Debug_Time_m % 10);
+                    NTA++;
+                    Debug_Text[NTA] = 48 + (Debug_Time_s / 10 );
+                    NTA++;
+                    Debug_Text[NTA] = 48 + (Debug_Time_s % 10);
+                    NTA++;
+                    Debug_Text[NTA] = 48 + (Debug_Time_ms / 100);
+                    NTA++;
+                    Debug_Text[NTA] = 48 + (Debug_Time_ms / 10 % 10);
+                    NTA++;
+                    Debug_Text[NTA] = 48 +  (Debug_Time_ms % 10);
+                    NTA++;
+                    Debug_Text[NTA] = 45; // "-" indicador de comando interno
+                    NTA++;
+                    if(CMP < 10)
+                    {
+                        Debug_Text[NTA] = 48 +  CMP;        // Es de un solo dígito la cantidad de mensajes perdidos
+                        NTA++;
+                    }
+                    else
+                    {
+                        Debug_Text[NTA] = 48 + (CMP / 10 ); // Es de mas de un dígito la cantidad de mensajes perdidos
+                        NTA++;
+                        Debug_Text[NTA] = 48 + (CMP % 10);  // (voy a suponer que no habrá mas de 99 perdidos.. osea... no samo tan qliao!!!)
+                        NTA++;
+                    }
+                    Aux16 = RED;
+                    Aux16 = Aux16 >>8;
+                    Debug_Text[NTA] = (Aux16 & 0x00FF); // Parte Alta del Color
+                    NTA++;
+                    Aux16 = RED;
+                    Debug_Text[NTA] = (Aux16 & 0x00FF); // Parte Baja del Color
+                    NTA++;
+                    Debug_Text[NTA] = 0;
+                    NTA++;
+                    CMP = 0;    // Acabo de mandar a informar los mensajes que perdí, reinicio la cuenta
+
+                }
             }
         }
     }
+
+
 }
 
 void Monitor_Recursos(void)
@@ -3274,22 +3310,22 @@ switch(Menu_Index)
 #if 1
             if(X_T > 250 && Y_T < 80)   //Boton de abajo
             {
-                DTxt("Abajo");
+                DTxt(ORANGE, "Abajo");
                 if(Clave_Menu == 1)
                 {
-                    DTxt("MUY Bien! 2/3");
+                    DTxt(GREEN, "MUY Bien! 2/3");
                     Clave_Menu = 2;
                 }
                 else
                 {
-                    DTxt("UPS! La cagaste -.- 2");
+                    DTxt(RED, "UPS! La cagaste -.- 2");
                     Clave_Menu = 0;
                 }
 
             }
             if(X_T > 250 && (Y_T < 160) && (Y_T > 80))   //Boton del medio
             {
-                DTxt("Medio");
+                DTxt(ORANGE, "Medio");
                 if(Clave_Menu == 2)
                 {
                     Menu_Index = MENU_HOME;// Entraste al menu secreto
@@ -3299,21 +3335,21 @@ switch(Menu_Index)
                 }
                 else
                 {
-                    DTxt("UPS! La cagaste -.- 3");
+                    DTxt(RED, "UPS! La cagaste -.- 3");
                     Clave_Menu = 0;
                 }
             }
             if(X_T > 250 && Y_T > 160)   //Boton de ashiba
             {
-                DTxt("Arriba");
+                DTxt(ORANGE, "Arriba");
                 if(Clave_Menu == 0)
                 {
                     Clave_Menu = 1;
-                    DTxt("Bien! 1/3");
+                    DTxt(GREEN, "Bien! 1/3");
                 }
                 else
                 {
-                    DTxt("UPS! La cagaste -.- 1");
+                    DTxt(RED, "UPS! La cagaste -.- 1");
                     Clave_Menu = 0;
                 }
             }
