@@ -656,7 +656,7 @@ BIT     FENACK;
 BIT     FECRC;
 
 BIT     FOVFT2;
-
+BIT     FRxAct;
 #endif  // DECLARACION DE VARIABLES
 
 #if 1
@@ -868,6 +868,7 @@ void Menu_Interactivo(void);
 
 void main(void) // PROGRAMA PRINCIPAL
 {
+    uint8_t i;
     Inicializar_Micro(); // CONFIGURA EL MICRO
     Inicializar_Valores(); // Valores por defecto necesarios
     DTxt(RED, "v0.4 Protocolo Estable al 17/9/17");
@@ -875,6 +876,7 @@ void main(void) // PROGRAMA PRINCIPAL
    // DTxt("Ejecutando Secuencia de Booteo...");
     //Bootear();
     DTxt(GREEN, "Inicio Completo, ejecutando el While(1) {...}");
+
 
     while (1) // Programa Principal  * * * NO OLVIDAR EL WDT * * *
     {
@@ -1616,15 +1618,19 @@ void Chk_Botones()
                 FTPB1 = 1;
 #endif
 #if 1
-                VDi[0] = 1; // NID
-                VDi[1] = 1; // FN
-                VDi[2] = 1; // Data
-                for(i=3; i<19; i++)
+                if(FRxAct == 0)
                 {
-                    VDi[i]=0;
+                    FRxAct = 1;
+                    DTxt(WHITE, "Int Activa");
+                    PIE1bits.RCIE = 1;
                 }
-                Encolar();
-                DTxt(BLUE, "Boton 1 Presionado");
+                else
+                {
+                    FRxAct = 0;
+                    DTxt(WHITE, "Int Desactivada");
+                    PIE1bits.RCIE = 0;
+                }
+                
 
 #endif                          //      < -------- Accion del boton 1
 #if 1
@@ -1669,15 +1675,27 @@ void Chk_Botones()
                 FTPB2 = 1;
 #endif
 #if 1
-                VDi[0] = 2; // NID
-                VDi[1] = 1; // FN
-                VDi[2] = 2; // Data
-                for(i=3; i<19; i++)
+//                VDi[0] = 2; // NID
+//                VDi[1] = 1; // FN
+//                VDi[2] = 2; // Data
+//                for(i=3; i<19; i++)
+//                {
+//                    VDi[i]=0;
+//                }
+//                Encolar();
+//                DTxt(BLUE, "Boton 2 Presionado");
+                if(FRxAct == 0)
                 {
-                    VDi[i]=0;
+                    FRxAct = 1;
+                    DTxt(WHITE, "Int Activa");
+                    PIE1bits.RCIE = 1;
                 }
-                Encolar();
-                DTxt(BLUE, "Boton 2 Presionado");
+                else
+                {
+                    FRxAct = 0;
+                    DTxt(WHITE, "Int Desactivada");
+                    PIE1bits.RCIE = 0;
+                }
 
 #endif                          //      < -------- Accion del boton 2
 #if 1
@@ -1704,17 +1722,17 @@ void Chk_Botones()
 
 
 
-    if(Boton_1 == 1)
-    {
-                VDi[0] = 3; // NID
-                VDi[1] = 1; // FN
-                VDi[2] = 3; // Data
-                for(i=3; i<19; i++)
-                {
-                    VDi[i]=0;
-                }
-                Encolar();
-    }
+//    if(Boton_1 == 1)
+//    {
+//                VDi[0] = 3; // NID
+//                VDi[1] = 1; // FN
+//                VDi[2] = 3; // Data
+//                for(i=3; i<19; i++)
+//                {
+//                    VDi[i]=0;
+//                }
+//                Encolar();
+//    }
     
 #if 1
 #if 1
@@ -2792,7 +2810,7 @@ uint8_t AuxCD;
 void DTxt(uint16_t Color, uint8_t ToShow[45])
 {
     uint8_t Largo=0;
-    uint16_t fin, Aux16;
+    uint16_t fin;
 
     while(ToShow[Largo] != '\0')
     {
@@ -2800,7 +2818,7 @@ void DTxt(uint16_t Color, uint8_t ToShow[45])
     }
     Largo++;
 
-    fin = NTA+Largo+8;  // Posición inicial + Cadena de Texto + Min/Seg/mSeg/Espacio + color
+    fin = NTA+Largo+8;  // Posición inicial + Cadena de Texto + Min/Seg/mSeg/Espacio
 
     if(fin > NTA_MAX)
     {
@@ -2810,13 +2828,12 @@ void DTxt(uint16_t Color, uint8_t ToShow[45])
         }
         return;
     }
-    Aux16 = Color;
 
     Debug_Text[NTA] = 48 + (Debug_Time_m / 10 );
     NTA++;
     Debug_Text[NTA] = 48 + (Debug_Time_m % 10);
     NTA++;
-    Debug_Text[NTA] = 48 + (Debug_Time_s / 10);
+    Debug_Text[NTA] = 48 + (Debug_Time_s / 10 );
     NTA++;
     Debug_Text[NTA] = 48 + (Debug_Time_s % 10);
     NTA++;
@@ -2824,7 +2841,7 @@ void DTxt(uint16_t Color, uint8_t ToShow[45])
     NTA++;
     Debug_Text[NTA] = 48 + (Debug_Time_ms / 10 % 10);
     NTA++;
-    Debug_Text[NTA] = 48 + (Debug_Time_ms % 10);
+    Debug_Text[NTA] = 48 +  (Debug_Time_ms % 10);
     NTA++;
     Debug_Text[NTA] = 32; // Espacio ¬ ¬
     NTA++;
@@ -2839,11 +2856,6 @@ void DTxt(uint16_t Color, uint8_t ToShow[45])
         Largo++;
         NTA++;
     }
-    Aux16 = Aux16 >>8;
-    Debug_Text[NTA] = (Aux16 & 0x00FF); // Parte Alta del Color
-    NTA++;
-    Debug_Text[NTA] = (Color & 0x00FF); // Parte Baja del Color
-    NTA++;
 
 }
 
@@ -2854,157 +2866,127 @@ void DTs()
         return;
     }
 
-    uint16_t color, Aux16;
+    uint16_t color;
     uint8_t i;
     uint8_t Largo = 0;
 
-
-
-    if(FBorradoNextRenglon == 0)
+    if(DTS_x_m == 0)        // Verifico si es el primer caracter que dibujo
     {
-        if(DTS_x_m == 0)        // Verifico si es el primer caracter que dibujo
+        while(Debug_Text[DTS_x_m] != '\0')
         {
-            while(Debug_Text[DTS_x_m] != '\0')
-            {
-                DTS_x_m++;
-            }
-            //DTS_x_m++;                // Obtengo el largo de la nueva cadena de texto
+            DTS_x_m++;
         }
+        //DTS_x_m++;                // Obtengo el largo de la nueva cadena de texto
+    }
 
 
-        if(DTS_x < 2)
-        {
-            color = BLUE;  // Minutos (2 digitos)
-        }
-        else
-        {
-            if(DTS_x < 4)
-            {
-                color = GREEN;  // Segundos (2 digitos)
-            }
-            else
-            {
-                if(DTS_x < 7)
-                {
-                    color = YELLOW; // Mili Segundos (3 digitos)
-                }
-                else
-                {
-                    // Mensaje de Texo (47 caracteres)
-                    color = 0;
-                    color = Debug_Text[DTS_x_m+1];  // Parte alta del Color
-                    color = color << 8;
-                    color = color + Debug_Text[DTS_x_m+2]; // Parte baja del Color
-                }
-            }
-        }
-
-        DrawChar(DTS_y, (DTS_x*6)+1, Debug_Text[DTS_x], color, BLACK, 1);
-        DTS_x ++;
-        if(DTS_x == DTS_x_m)        // Verifico si ya dibujé el ultimo caracter del renglón
-        {
-
-            FBorradoNextRenglon = 1;    // Indico que acabo de escribir todo el texo, ahora debo borrar el proximo renglon
-    #if 1
-            DTS_x = 0;              // Reinicio el contador en el renglón
-
-            if(DTS_y <= DTS_y_b)
-            {
-                DTS_y = DTS_y_t - 10;
-            }
-            else
-            {
-                DTS_y = DTS_y - 10;
-            }
-        }
-
-    #endif                      // Manejo de coordenadas en la pantalla
-
+    if(DTS_x < 2)
+    {
+        color = BLUE;  // Minutos (2 digitos)
     }
     else
     {
-
-        DrawChar(DTS_y, (DTS_x*6)+1, ' ', DARKGREY, BLACK, 1);
-        DTS_x ++;
-
-        if(DTS_x == 53)
+        if(DTS_x < 4)
         {
-            FBorradoNextRenglon = 0;
-            DTS_x = 0;              // Reinicio el contador en el renglón
-            Largo = 0;
-            DTS_x_m = 0;
-            while(Debug_Text[Largo] != '\0')
+            color = GREEN;  // Segundos (2 digitos)
+        }
+        else
+        {
+            if(DTS_x < 7)
             {
-                Largo++;
-            }
-            Largo = Largo + 3;                // Obtengo el largo de la cadena de texto + Color
-
-            if(NTA == Largo)        // Verifico si quedan mensajes
-            {
-                NTA = 0;            // No hay mas por mostrar
-                DTS_x_m = 0;
+                color = YELLOW; // Mili Segundos (3 digitos)
             }
             else
             {
-                for(i = 0; i <= (NTA-Largo) ; i++)
-                {
-                    Debug_Text[i] = Debug_Text[Largo+i];   // Hay todavia mensajes por mostrar, desfragmento
-                }
-                NTA = NTA - Largo; // Libero lugar en el buffer
+                color = WHITE;  // Mensaje de Texo (47 caracteres)
             }
+        }
+    }
 
-            if(CMP != 0)            // Verifico si perdi mensajes mientras dibujaba
+
+    DrawChar(DTS_y, (DTS_x*6)+1, Debug_Text[DTS_x], color, BLACK, 1);
+    DTS_x ++;
+    if(DTS_x == DTS_x_m)        // Verifico si ya dibujé el ultimo caracter del renglón
+    {
+            DTS_x_m = 0;
+
+#if 1
+        DTS_x = 0;              // Reinicio el contador en el renglón
+
+        if(DTS_y <= DTS_y_b)
+        {
+            DTS_y = DTS_y_t - 10;
+        }
+        else
+        {
+            DTS_y = DTS_y - 10;
+        }
+#endif                      // Manejo de coordenadas en la pantalla
+
+        Largo = 0;
+        while(Debug_Text[Largo] != '\0')
+        {
+            Largo++;
+        }
+        Largo++;                // Obtengo el largo de la cadena de texto
+
+        if(NTA == Largo)        // Verifico si quedan mensajes
+        {
+            NTA = 0;            // No hay mas por mostrar
+            DTS_x_m = 0;
+        }
+        else
+        {
+            for(i = 0; i <= (NTA-Largo) ; i++)
             {
-                if(CMP<10)      // Largo del mensaje de error
+                Debug_Text[i] = Debug_Text[Largo+i];   // Hay todavia mensajes por mostrar, desfragmento
+            }
+            NTA = NTA - Largo; // Libero lugar en el buffer
+        }
+
+        if(CMP != 0)            // Verifico si perdi mensajes mientras dibujaba
+        {
+            if(CMP<10)      // Largo del mensaje de error
+            {
+                Largo = 10;
+            }
+            else
+            {
+                Largo = 11;
+            }
+            if((NTA_MAX-NTA)>= Largo)   //Verifico si entra el mensaje de error
+            {
+                Debug_Text[NTA] = 48 + (Debug_Time_m / 10 );
+                NTA++;
+                Debug_Text[NTA] = 48 + (Debug_Time_m % 10);
+                NTA++;
+                Debug_Text[NTA] = 48 + (Debug_Time_s / 10 );
+                NTA++;
+                Debug_Text[NTA] = 48 + (Debug_Time_s % 10);
+                NTA++;
+                Debug_Text[NTA] = 48 + (Debug_Time_ms / 100);
+                NTA++;
+                Debug_Text[NTA] = 48 + (Debug_Time_ms / 10 % 10);
+                NTA++;
+                Debug_Text[NTA] = 48 +  (Debug_Time_ms % 10);
+                NTA++;
+                Debug_Text[NTA] = 45; // "-" indicador de comando interno
+                NTA++;
+                if(CMP < 10)
                 {
-                    Largo = 12;
+                    Debug_Text[NTA] = 48 +  CMP;        // Es de un solo dígito la cantidad de mensajes perdidos
+                    NTA++;
                 }
                 else
                 {
-                    Largo = 13;
+                    Debug_Text[NTA] = 48 + (CMP / 10 ); // Es de mas de un dígito la cantidad de mensajes perdidos
+                    NTA++;
+                    Debug_Text[NTA] = 48 + (CMP % 10);  // (voy a suponer que no habrá mas de 99 perdidos.. osea... no samo tan qliao!!!)
+                    NTA++;
                 }
-                if((NTA_MAX-NTA)>= Largo)   //Verifico si entra el mensaje de error
-                {
-                    Debug_Text[NTA] = 48 + (Debug_Time_m / 10 );
-                    NTA++;
-                    Debug_Text[NTA] = 48 + (Debug_Time_m % 10);
-                    NTA++;
-                    Debug_Text[NTA] = 48 + (Debug_Time_s / 10 );
-                    NTA++;
-                    Debug_Text[NTA] = 48 + (Debug_Time_s % 10);
-                    NTA++;
-                    Debug_Text[NTA] = 48 + (Debug_Time_ms / 100);
-                    NTA++;
-                    Debug_Text[NTA] = 48 + (Debug_Time_ms / 10 % 10);
-                    NTA++;
-                    Debug_Text[NTA] = 48 +  (Debug_Time_ms % 10);
-                    NTA++;
-                    Debug_Text[NTA] = 45; // "-" indicador de comando interno
-                    NTA++;
-                    if(CMP < 10)
-                    {
-                        Debug_Text[NTA] = 48 +  CMP;        // Es de un solo dígito la cantidad de mensajes perdidos
-                        NTA++;
-                    }
-                    else
-                    {
-                        Debug_Text[NTA] = 48 + (CMP / 10 ); // Es de mas de un dígito la cantidad de mensajes perdidos
-                        NTA++;
-                        Debug_Text[NTA] = 48 + (CMP % 10);  // (voy a suponer que no habrá mas de 99 perdidos.. osea... no samo tan qliao!!!)
-                        NTA++;
-                    }
-                    Aux16 = RED;
-                    Aux16 = Aux16 >>8;
-                    Debug_Text[NTA] = (Aux16 & 0x00FF); // Parte Alta del Color
-                    NTA++;
-                    Aux16 = RED;
-                    Debug_Text[NTA] = (Aux16 & 0x00FF); // Parte Baja del Color
-                    NTA++;
-                    Debug_Text[NTA] = 0;
-                    NTA++;
-                    CMP = 0;    // Acabo de mandar a informar los mensajes que perdí, reinicio la cuenta
-
-                }
+                Debug_Text[NTA] = 0;
+                NTA++;
+                CMP = 0;    // Acabo de mandar a informar los mensajes que perdí, reinicio la cuenta
             }
         }
     }
